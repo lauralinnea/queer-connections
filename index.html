@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queer Connections</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf6ee;
+    --ink:#1d1a22;
+    --muted:#6b6473;
+    --tile:#efe7da;
+    --tile-line:#e2d7c5;
+    --sel:#2d2733;
+    --t0:#e8b53e; /* gold   */
+    --t1:#e0568b; /* magenta*/
+    --t2:#1f9bb0; /* teal */
+    --t3:#7c5cc4; /* purple */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(120% 80% at 90% -10%, rgba(224,86,139,.10), transparent 55%),
+      radial-gradient(120% 80% at 0% 110%, rgba(124,92,196,.12), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Hanken Grotesk',sans-serif;
+    min-height:100vh;
+    display:flex;justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .wrap{width:100%;max-width:520px}
+  header{text-align:center;margin-bottom:22px}
+  .kicker{
+    font-family:'Hanken Grotesk';font-weight:600;letter-spacing:.32em;
+    text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces',serif;font-weight:900;font-size:clamp(34px,9vw,52px);
+    line-height:.92;letter-spacing:-.01em;
+    background:linear-gradient(96deg,var(--t0),var(--t1) 38%,var(--t3) 72%,var(--t2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{font-size:13.5px;color:var(--muted);margin-top:9px}
+  .puzzle-name{
+    font-family:'Fraunces';font-style:italic;font-weight:600;font-size:15px;
+    color:var(--ink);margin-top:4px;opacity:.8;
+  }
+
+  .board{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+  .solved{
+    border-radius:14px;padding:11px 14px;color:#fff;text-align:center;
+    animation:pop .42s cubic-bezier(.2,.9,.3,1.3) both;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+  }
+  .solved .cat{font-family:'Fraunces';font-weight:900;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+  .solved .words{font-weight:700;font-size:14.5px;margin-top:2px}
+  .solved .note{font-size:11.5px;opacity:.92;margin-top:5px;font-weight:500;line-height:1.35}
+  .t0{background:var(--t0)} .t1{background:var(--t1)}
+  .t2{background:var(--t2)} .t3{background:var(--t3)}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .tile{
+    aspect-ratio:1.18/1;border:none;border-radius:13px;cursor:pointer;
+    background:var(--tile);box-shadow:inset 0 0 0 1.5px var(--tile-line);
+    font-family:'Hanken Grotesk';font-weight:700;
+    font-size:clamp(11px,3.3vw,15px);letter-spacing:.01em;
+    text-transform:uppercase;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:4px;transition:transform .12s ease,background .15s ease,color .15s ease,box-shadow .15s;
+    user-select:none;line-height:1.05;word-break:break-word;
+  }
+  .tile:hover{transform:translateY(-2px)}
+  .tile.sel{background:var(--sel);color:#fdf7ef;box-shadow:none;transform:translateY(-1px) scale(1.02)}
+  .tile.shake{animation:shake .42s}
+  .tile.jump{animation:jump .3s}
+
+  .dots{display:flex;align-items:center;justify-content:center;gap:9px;margin:20px 0 14px;font-size:13px;color:var(--muted)}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--sel);transition:transform .25s,opacity .25s}
+  .dot.gone{transform:scale(.35);opacity:.2}
+
+  .controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  button.ctl{
+    font-family:'Hanken Grotesk';font-weight:600;font-size:14px;
+    padding:11px 20px;border-radius:999px;cursor:pointer;background:transparent;
+    border:1.6px solid var(--ink);color:var(--ink);transition:.15s;
+  }
+  button.ctl:hover:not(:disabled){background:var(--ink);color:var(--bg)}
+  button.ctl:disabled{opacity:.32;cursor:default}
+  button.primary{background:var(--ink);color:var(--bg)}
+  button.primary:hover:not(:disabled){opacity:.85}
+  button.primary:disabled{background:var(--muted);border-color:var(--muted)}
+
+  .toast{
+    position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-20px);
+    background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:999px;
+    font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.28s;z-index:10;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .endcard{
+    margin-top:18px;text-align:center;border:1.6px solid var(--tile-line);
+    border-radius:18px;padding:22px 18px;background:rgba(255,255,255,.5);
+    animation:pop .4s ease both;
+  }
+  .endcard h2{font-family:'Fraunces';font-weight:900;font-size:26px;margin-bottom:4px}
+  .endcard p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+  .sharegrid{font-size:20px;line-height:1.5;letter-spacing:3px;margin:10px 0 16px}
+  .endbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  footer{text-align:center;margin-top:26px;font-size:11.5px;color:var(--muted);line-height:1.5}
+
+  @keyframes pop{0%{transform:scale(.94);opacity:0}100%{transform:scale(1);opacity:1}}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+  @keyframes jump{40%{transform:translateY(-9px)}70%{transform:translateY(2px)}100%{transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Happy Pride · A Connections Game</div>
+    <h1>Queer<br>Connections</h1>
+    <div class="sub">Find the four hidden groups of four. Watch for the traps.</div>
+    <div class="puzzle-name" id="pname"></div>
+  </header>
+
+  <div class="board">
+    <div id="solved"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="dots" id="dots"><span>Mistakes left</span></div>
+
+  <div class="controls" id="controls">
+    <button class="ctl" id="shuffle">Shuffle</button>
+    <button class="ctl" id="deselect" disabled>Deselect all</button>
+    <button class="ctl primary" id="submit" disabled>Submit</button>
+  </div>
+
+  <div id="endzone"></div>
+
+  <footer>
+    Groups range from easy <span style="color:var(--t0)">●</span> to tricky <span style="color:var(--t3)">●</span>.<br>
+    Solve a group to reveal a little note about it. 🏳️‍🌈🏳️‍⚧️
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PUZZLES = [
+  {
+    name: "Pride 101",
+    cats: [
+      { tier:0, name:"___ Pride Flag", words:["RAINBOW","TRANS","BI","ACE"],
+        note:"Each of these has its own pride flag — and yes, there are dozens more." },
+      { tier:1, name:"Gay community 'types'", words:["OTTER","CUB","TWINK","JOCK"],
+        note:"Affectionate self-describing labels. (Careful: BEAR fits here too — but it was a flag.)" },
+      { tier:2, name:"Ballroom scene", words:["HOUSE","REALNESS","SHADE","VOGUE"],
+        note:"Language born from Black & Latine queer ballroom culture in NYC." },
+      { tier:3, name:"Polari (coded gay slang)", words:["BONA","VADA","NAFF","EEK"],
+        note:"Secret slang used in Britain when being gay was still criminalised. Bona = good, vada = look, eek = face." },
+    ]
+  },
+  {
+    name: "Icons & Identities",
+    cats: [
+      { tier:0, name:"LGBTQ+ identities (short)", words:["ACE","ARO","ENBY","DEMI"],
+        note:"Asexual, aromantic, nonbinary (N-B), demisexual." },
+      { tier:1, name:"DRAG ___", words:["QUEEN","RACE","BRUNCH","SHOW"],
+        note:"Each word follows 'drag'. Sunday drag brunch is a sacred institution." },
+      { tier:2, name:"Drag artistry slang", words:["BEAT","MUG","TUCK","GAG"],
+        note:"Beat = makeup, mug = the painted face, gag = to stun. (GAG nearly went with drag.)" },
+      { tier:3, name:"Queer history figures", words:["MARSHA","SYLVIA","HARVEY","AUDRE"],
+        note:"Marsha P. Johnson, Sylvia Rivera, Harvey Milk, Audre Lorde — pioneers worth knowing." },
+    ]
+  },
+  {
+    name: "Sapphic & Screen",
+    cats: [
+      { tier:0, name:"At a Pride parade", words:["GLITTER","FLOAT","BANNER","MARCH"],
+        note:"The first Pride was a march and a riot before it was ever a parade." },
+      { tier:1, name:"Lesbian gender expressions", words:["MASC","FEMME","STEM","FUTCH"],
+        note:"A spectrum of presentation — futch sits playfully between butch and femme." },
+      { tier:2, name:"Queer screen", words:["CAROL","BOUND","POSE","EUPHORIA"],
+        note:"Landmark LGBTQ+ film & TV. (POSE could feel ballroom-ish — a deliberate trap.)" },
+      { tier:3, name:"RuPaul catchphrases", words:["SASHAY","SHANTAY","KIKI","WERK"],
+        note:"Shantay you stay, sashay away — and werk it in between." },
+    ]
+  },
+  {
+    name: "Icons & Anthems",
+    cats: [
+      { tier:0, name:"Pronouns", words:["THEY","SHE","HE","ZE"],
+        note:"Sharing your pronouns isn't only for trans folks — it makes space for everyone. (Ze is one of several neopronouns.)" },
+      { tier:1, name:"Pop divas the gays adore", words:["CHER","GAGA","KYLIE","MADONNA"],
+        note:"Decades of queer dancefloors owe these legends everything — Madonna even gave us 'Vogue.'" },
+      { tier:2, name:"Queer literary icons", words:["WILDE","SAPPHO","BALDWIN","WOOLF"],
+        note:"Oscar Wilde, Sappho of Lesbos, James Baldwin, and Virginia Woolf — queer voices that shaped literature." },
+      { tier:3, name:"Trans & nonbinary slang", words:["EGG","BIND","PACK","GAFF"],
+        note:"An 'egg' is someone who hasn't realised they're trans yet; binding, packing & gaffs are gender-affirming." },
+    ]
+  },
+  {
+    name: "Around the Rainbow",
+    cats: [
+      { tier:0, name:"Umbrella words for the community", words:["QUEER","GAY","LGBT","PRIDE"],
+        note:"Words the community has reclaimed and gathered under over the decades." },
+      { tier:1, name:"Cities famous for Pride", words:["SYDNEY","BERLIN","MADRID","BRIGHTON"],
+        note:"Sydney's Mardi Gras, Berlin's CSD, Madrid's Orgullo, and Brighton — the UK's queerest seaside city." },
+      { tier:2, name:"Drag Race legends", words:["BIANCA","JINKX","KATYA","TRIXIE"],
+        note:"Bianca Del Rio, Jinkx Monsoon, Katya, and Trixie Mattel — Hall of Fame, frankly." },
+      { tier:3, name:"Polari slang", words:["OMI","PALONE","RIAH","SLAP"],
+        note:"More of the secret tongue: omi = man, palone = woman, riah = hair, slap = makeup." },
+    ]
+  }
+];
+
+const TIER_EMOJI = ["🟨","🟧","🟦","🟪"];
+const PRIDE_START = new Date("2026-06-01T00:00:00");
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+const weeksSince = Math.floor((Date.now() - PRIDE_START.getTime()) / MS_PER_WEEK);
+let puzzleIndex = ((weeksSince % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
+let puzzle, tiles, selected, solvedTiers, mistakes, history, over;
+
+function init(idx){
+  puzzleIndex = idx;
+  puzzle = PUZZLES[idx];
+  tiles = [];
+  puzzle.cats.forEach(c => c.words.forEach(w => tiles.push({word:w, tier:c.tier})));
+  shuffleArr(tiles);
+  selected = [];
+  solvedTiers = [];
+  mistakes = 4;
+  history = [];
+  over = false;
+  document.getElementById('pname').textContent = "Today's board: " + puzzle.name;
+  document.getElementById('endzone').innerHTML = "";
+  setControlsVisible(true);
+  render();
+}
+
+function shuffleArr(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
+
+function render(){
+  // solved bars
+  const sc = document.getElementById('solved');
+  sc.innerHTML = "";
+  solvedTiers.forEach(t => {
+    const cat = puzzle.cats.find(c=>c.tier===t);
+    const d = document.createElement('div');
+    d.className = "solved t"+t;
+    d.innerHTML = `<div class="cat">${cat.name}</div>
+      <div class="words">${cat.words.join("  ·  ")}</div>
+      <div class="note">${cat.note}</div>`;
+    sc.appendChild(d);
+  });
+  // grid (unsolved tiles)
+  const g = document.getElementById('grid');
+  g.innerHTML = "";
+  tiles.filter(t => !solvedTiers.includes(t.tier)).forEach(t => {
+    const b = document.createElement('button');
+    b.className = "tile" + (selected.includes(t.word) ? " sel":"");
+    b.textContent = t.word;
+    b.dataset.word = t.word;
+    b.onclick = () => toggle(t.word, b);
+    g.appendChild(b);
+  });
+  // dots
+  const dz = document.getElementById('dots');
+  dz.innerHTML = "<span>Mistakes left</span>";
+  for(let i=0;i<4;i++){
+    const d = document.createElement('span');
+    d.className = "dot" + (i >= mistakes ? " gone":"");
+    dz.appendChild(d);
+  }
+  updateControls();
+}
+
+function toggle(word, el){
+  if(over) return;
+  const i = selected.indexOf(word);
+  if(i>-1){ selected.splice(i,1); el.classList.remove('sel'); }
+  else if(selected.length<4){ selected.push(word); el.classList.add('sel'); el.classList.add('jump'); setTimeout(()=>el.classList.remove('jump'),300); }
+  updateControls();
+}
+
+function updateControls(){
+  document.getElementById('submit').disabled = selected.length!==4 || over;
+  document.getElementById('deselect').disabled = selected.length===0 || over;
+  document.getElementById('shuffle').disabled = over;
+}
+
+function submit(){
+  if(selected.length!==4) return;
+  const picked = selected.map(w => tiles.find(t=>t.word===w));
+  const tierOf = picked.map(t=>t.tier);
+  history.push(tierOf.slice());
+
+  const counts = {};
+  tierOf.forEach(t => counts[t]=(counts[t]||0)+1);
+  const maxSame = Math.max(...Object.values(counts));
+
+  if(maxSame===4){
+    // correct
+    const tier = tierOf[0];
+    solvedTiers.push(tier);
+    selected = [];
+    render();
+    if(solvedTiers.length===4) endGame(true);
+  } else {
+    // wrong
+    mistakes--;
+    const tileEls = [...document.querySelectorAll('.tile.sel')];
+    tileEls.forEach(e => e.classList.add('shake'));
+    setTimeout(()=>tileEls.forEach(e=>e.classList.remove('shake')),450);
+    if(maxSame===3) toast("So close — one away!");
+    else toast(pickMiss());
+    render();
+    if(mistakes<=0) endGame(false);
+  }
+}
+
+function pickMiss(){
+  const m = ["Not quite.","Mmm, not this time.","Keep digging.","The girls are not connecting.","Try again, hunty."];
+  return m[Math.floor(Math.random()*m.length)];
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),1700);
+}
+
+function endGame(won){
+  over = true;
+  // reveal any unsolved groups
+  puzzle.cats.forEach(c => { if(!solvedTiers.includes(c.tier)) solvedTiers.push(c.tier); });
+  // order solved bars by tier for a tidy finish
+  solvedTiers.sort((a,b)=>a-b);
+  render();
+  setControlsVisible(false);
+
+  const share = history.map(row => row.map(t=>TIER_EMOJI[t]).join("")).join("\n");
+  const titleEmoji = won ? "🌈" : "🏳️‍🌈";
+  const ez = document.getElementById('endzone');
+  ez.innerHTML = `<div class="endcard">
+      <h2>${won ? "You did that! "+titleEmoji : "Out of guesses 💔"}</h2>
+      <p>${won ? "Flawless taste in vocabulary." : "The full board is revealed above — now you know."}</p>
+      <div class="sharegrid">${share.replace(/\n/g,'<br>')}</div>
+      <div class="endbtns">
+        <button class="ctl" id="copybtn">Copy result</button>
+        <button class="ctl primary" id="nextbtn">New board →</button>
+      </div>
+    </div>`;
+  document.getElementById('copybtn').onclick = () => {
+    const txt = `Queer Connections — ${puzzle.name} ${titleEmoji}\n${share}`;
+    navigator.clipboard?.writeText(txt).then(()=>toast("Copied to clipboard!"), ()=>toast("Couldn't copy"));
+  };
+  document.getElementById('nextbtn').onclick = () => init((puzzleIndex+1)%PUZZLES.length);
+}
+
+function setControlsVisible(v){ document.getElementById('controls').style.display = v ? 'flex':'none'; }
+
+document.getElementById('submit').onclick = submit;
+document.getElementById('shuffle').onclick = () => { if(over) return; shuffleArr(tiles); render(); };
+document.getElementById('deselect').onclick = () => { selected=[]; render(); };
+
+init(puzzleIndex);
+</script>
+</body>
+</html>
